@@ -9,10 +9,15 @@
 // =============================================================
 
 func tank_drawFloor
-    // Dark floor
-    DrawCube(Vector3(GRID_W / 2.0 + 0.5, -0.1, GRID_H / 2.0 + 0.5),
-             GRID_W + 2.0, 0.15, GRID_H + 2.0,
-             RAYLIBColor(30, 30, 35, 255))
+    // Ground - textured with ground.png, tiled once per grid cell (not
+    // stretched) so the texture repeats across the floor
+    for r = 1 to GRID_H
+        for c = 1 to GRID_W
+            wx = c * CELL_SZ
+            wz = r * CELL_SZ
+            DrawModel(tank_groundModel, Vector3(wx, -0.1, wz), 1.0, WHITE)
+        next
+    next
 
     // Grid lines (subtle)
     for r = 1 to GRID_H
@@ -30,10 +35,9 @@ func tank_drawFloor
             ok
 
             if t = T_WATER
-                // Animated water
+                // Animated water - textured with water.png
                 wh = sin(animTime * 3.0 + wx + wz) * 0.03
-                DrawCube(Vector3(wx, 0.05 + wh, wz), 0.98, 0.10, 0.98,
-                         RAYLIBColor(20, 60, 150, 200))
+                DrawModel(tank_waterModel, Vector3(wx, 0.05 + wh, wz), 1.0, WHITE)
                 // Surface shimmer
                 DrawCube(Vector3(wx, 0.12 + wh, wz), 0.70, 0.01, 0.70,
                          RAYLIBColor(60, 120, 200, 120))
@@ -61,15 +65,22 @@ func tank_drawFloor
         next
     next
 
-    // Border walls
+    // Border walls - pushed out flush with the grid edge (offset by half
+    // their own thickness, plus the wall/steel tiles' own 2% overlap margin -
+    // see tank_wallMesh/tank_steelMesh - so they clear the now-slightly-wider
+    // wall cubes) instead of centred on it, since centring them made them
+    // overlap the outermost row/column's brick or steel wall cubes whenever a
+    // level places a wall tile at the map edge, causing z-fighting/flicker
     bh = 0.6
-    DrawCube(Vector3(0.5, bh/2, GRID_H/2.0 + 0.5), 0.3, bh, GRID_H + 1.0,
+    bw = 0.3
+    wallMargin = CELL_SZ * 0.01   // half of the wall/steel tiles' 2% overlap
+    DrawCube(Vector3(0.5 - bw/2 - wallMargin, bh/2, GRID_H/2.0 + 0.5), bw, bh, GRID_H + 1.0,
              RAYLIBColor(80, 80, 80, 255))
-    DrawCube(Vector3(GRID_W + 0.5, bh/2, GRID_H/2.0 + 0.5), 0.3, bh, GRID_H + 1.0,
+    DrawCube(Vector3(GRID_W + 0.5 + bw/2 + wallMargin, bh/2, GRID_H/2.0 + 0.5), bw, bh, GRID_H + 1.0,
              RAYLIBColor(80, 80, 80, 255))
-    DrawCube(Vector3(GRID_W/2.0 + 0.5, bh/2, 0.5), GRID_W + 1.0, bh, 0.3,
+    DrawCube(Vector3(GRID_W/2.0 + 0.5, bh/2, 0.5 - bw/2 - wallMargin), GRID_W + 1.0, bh, bw,
              RAYLIBColor(80, 80, 80, 255))
-    DrawCube(Vector3(GRID_W/2.0 + 0.5, bh/2, GRID_H + 0.5), GRID_W + 1.0, bh, 0.3,
+    DrawCube(Vector3(GRID_W/2.0 + 0.5, bh/2, GRID_H + 0.5 + bw/2 + wallMargin), GRID_W + 1.0, bh, bw,
              RAYLIBColor(80, 80, 80, 255))
 
 // =============================================================
@@ -84,47 +95,16 @@ func tank_drawWalls3D
             wz = r * CELL_SZ
 
             if t = T_BRICK
-                // Orange/brown brick
-                DrawCube(Vector3(wx, 0.3, wz), 0.96, 0.58, 0.96,
-                         RAYLIBColor(180, 100, 30, 255))
-                // Mortar lines
-                DrawCube(Vector3(wx, 0.3, wz + 0.49), 0.98, 0.02, 0.01,
-                         RAYLIBColor(80, 50, 20, 255))
-                DrawCube(Vector3(wx, 0.45, wz + 0.49), 0.98, 0.02, 0.01,
-                         RAYLIBColor(80, 50, 20, 255))
-                DrawCube(Vector3(wx, 0.15, wz + 0.49), 0.98, 0.02, 0.01,
-                         RAYLIBColor(80, 50, 20, 255))
-                // Vertical mortar
-                DrawCube(Vector3(wx, 0.22, wz + 0.49), 0.02, 0.16, 0.01,
-                         RAYLIBColor(80, 50, 20, 255))
-                DrawCube(Vector3(wx - 0.25, 0.38, wz + 0.49), 0.02, 0.16, 0.01,
-                         RAYLIBColor(80, 50, 20, 255))
-                DrawCube(Vector3(wx + 0.25, 0.38, wz + 0.49), 0.02, 0.16, 0.01,
-                         RAYLIBColor(80, 50, 20, 255))
-                // Top face highlight
-                DrawCube(Vector3(wx, 0.59, wz), 0.94, 0.01, 0.94,
-                         RAYLIBColor(210, 130, 50, 150))
+                // Destructible wall - textured with wall.png via a reusable
+                // textured cube model (DrawCubeTexture isn't bound in this
+                // raylib build, so we use the GenMeshCube+DrawModel path
+                // that linedrawing3d's cubicmap walls use instead).
+                DrawModel(tank_wallModel, Vector3(wx, 0.3, wz), 1.0, WHITE)
             ok
 
             if t = T_STEEL
-                // Silver steel wall
-                DrawCube(Vector3(wx, 0.35, wz), 0.96, 0.68, 0.96,
-                         RAYLIBColor(160, 160, 170, 255))
-                // Rivet pattern
-                for rx = -1 to 1 step 2
-                    for rz = -1 to 1 step 2
-                        DrawSphere(Vector3(wx + rx * 0.28, 0.50, wz + rz * 0.28),
-                                   0.06, RAYLIBColor(200, 200, 210, 255))
-                    next
-                next
-                // Center cross
-                DrawCube(Vector3(wx, 0.35, wz + 0.49), 0.60, 0.06, 0.01,
-                         RAYLIBColor(120, 120, 130, 255))
-                DrawCube(Vector3(wx, 0.35, wz + 0.49), 0.06, 0.50, 0.01,
-                         RAYLIBColor(120, 120, 130, 255))
-                // Top shine
-                DrawCube(Vector3(wx, 0.69, wz), 0.90, 0.01, 0.90,
-                         RAYLIBColor(200, 200, 220, 120))
+                // Indestructible wall - textured with stell.png
+                DrawModel(tank_steelModel, Vector3(wx, 0.35, wz), 1.0, WHITE)
             ok
         next
     next

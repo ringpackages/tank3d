@@ -92,7 +92,7 @@ func tank_updateMusic
     ok
 
     // Switch music based on game state
-    if gameState = ST_TITLE or gameState = ST_GAMEOVER or gameState = ST_WON
+    if gameState = ST_MENU or gameState = ST_GAMEOVER or gameState = ST_WON
         if musicPlaying != 1
             StopMusicStream(musBattle)
             PlayMusicStream(musMenu)

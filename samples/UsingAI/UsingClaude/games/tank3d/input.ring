@@ -40,23 +40,15 @@ func tank_handleInput dt
         ok
     ok
 
-    if gameState = ST_TITLE
-        if IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_SPACE)
-            gameState = ST_PLAYING
-            level = 1
-            score = 0
-            lives = 3
-            totalKills = 0
-            totalShotsFired = 0
-            accuracyHits = 0
-            tank_loadLevel(level)
-        ok
+    if gameState = ST_MENU
+        tank_handleMenuInput()
         return
     ok
 
     if gameState = ST_GAMEOVER or gameState = ST_WON
         if IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_SPACE)
-            gameState = ST_TITLE
+            gameState = ST_MENU
+            ShowCursor()
         ok
         return
     ok
@@ -64,6 +56,12 @@ func tank_handleInput dt
     if gameState = ST_PLAYING
         if IsKeyPressed(KEY_P)
             gameState = ST_PAUSED
+            return
+        ok
+        if IsKeyPressed(KEY_ESCAPE)
+            menuSelectedLevel = level
+            gameState = ST_MENU
+            ShowCursor()
             return
         ok
     ok
@@ -138,8 +136,8 @@ func tank_handleInput dt
     // Fire (with cooldown)
     pFireCooldown -= dt
     if pFireCooldown < 0 pFireCooldown = 0 ok
-    if IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_ENTER)
-        if len(pbullets) < 2 and pFireCooldown <= 0
+    if IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_F)
+        if pFireCooldown <= 0
             bspd = BULLET_SPEED
             if pspeedBoost > 0 bspd = bspd * 1.3 ok
             add(pbullets, [true, px, py, pdir, bspd])
@@ -191,3 +189,131 @@ func tank_canMove x, y, isPlayer
     ok
 
     return true
+
+// =============================================================
+// Level-Select Menu Input
+// =============================================================
+
+func tank_handleMenuInput
+    prevSel = menuSelectedLevel
+    cols = 4   // 4 columns × 3 rows = 12 levels
+
+    if IsKeyPressed(KEY_RIGHT) or IsKeyPressed(KEY_D)
+        if menuSelectedLevel < maxLevel
+            menuSelectedLevel += 1
+        ok
+    ok
+    if IsKeyPressed(KEY_LEFT) or IsKeyPressed(KEY_A)
+        if menuSelectedLevel > 1 and menuSelectedLevel != CLOSE_BTN
+            menuSelectedLevel -= 1
+        ok
+    ok
+    if IsKeyPressed(KEY_DOWN) or IsKeyPressed(KEY_S)
+        if menuSelectedLevel <= maxLevel - cols
+            menuSelectedLevel += cols
+        but menuSelectedLevel <= maxLevel
+            menuSelectedLevel = CLOSE_BTN
+        ok
+    ok
+    if IsKeyPressed(KEY_UP) or IsKeyPressed(KEY_W)
+        if menuSelectedLevel = CLOSE_BTN
+            menuSelectedLevel = maxLevel - 1   // centre of last row
+        but menuSelectedLevel > cols
+            menuSelectedLevel -= cols
+        ok
+    ok
+
+    if IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_SPACE)
+        if menuSelectedLevel = CLOSE_BTN
+            quitGame = true
+            return
+        ok
+        level = menuSelectedLevel
+        score = 0
+        lives = 3
+        totalKills = 0
+        totalShotsFired = 0
+        accuracyHits = 0
+        tank_loadLevel(level)
+        gameState = ST_PLAYING
+        HideCursor()
+        return
+    ok
+
+    if IsKeyPressed(KEY_ESCAPE)
+        quitGame = true
+        return
+    ok
+
+    // Mouse hover & click
+    tank_computeMenuLayout()
+    mx = GetMouseX()
+    my = GetMouseY()
+
+    cardW  = tank_cardW
+    cardH  = tank_cardH
+    gapX   = tank_gapX
+    gapY   = tank_gapY
+    gridH2 = tank_gridH
+    startX = tank_startX
+    startY = tank_startY
+
+    // Detect which item the mouse is over this frame
+    newHover = -1
+    for i = 1 to maxLevel
+        row = floor((i - 1) / cols)
+        col = (i - 1) % cols
+        cx  = startX + col * (cardW + gapX)
+        cy  = startY + row * (cardH + gapY)
+        if mx >= cx and mx < cx + cardW and my >= cy and my < cy + cardH
+            newHover = i
+        ok
+    next
+
+    // Close button hover
+    btnW  = tank_btnW
+    btnH  = tank_btnH
+    btnX  = tank_btnX
+    btnY  = tank_btnY
+    if mx >= btnX and mx < btnX + btnW and my >= btnY and my < btnY + btnH
+        newHover = CLOSE_BTN
+    ok
+
+    // Track press position and which button was under the cursor at press time
+    if IsMouseButtonPressed(0)
+        menuPressX     = mx
+        menuPressY     = my
+        menuPressHover = newHover
+    ok
+
+    // Sync selection when mouse enters a new item OR moves within the current item
+    mouseMoved = (mx != menuLastMouseX or my != menuLastMouseY)
+    if newHover >= 0 and (newHover != menuLastHover or mouseMoved)
+        menuSelectedLevel = newHover
+    ok
+    menuLastHover  = newHover
+    menuLastMouseX = mx
+    menuLastMouseY = my
+
+    // Click fires only when released over the same button that was pressed
+    if IsMouseButtonReleased(0) and newHover >= 0 and newHover = menuPressHover
+        if menuSelectedLevel = CLOSE_BTN
+            quitGame = true
+            return
+        ok
+        level = menuSelectedLevel
+        score = 0
+        lives = 3
+        totalKills = 0
+        totalShotsFired = 0
+        accuracyHits = 0
+        tank_loadLevel(level)
+        gameState = ST_PLAYING
+        HideCursor()
+        return
+    ok
+
+    // Play steel_hit sound whenever selection changes
+    if menuSelectedLevel != prevSel
+        PlaySound(sndSteelHit)
+    ok

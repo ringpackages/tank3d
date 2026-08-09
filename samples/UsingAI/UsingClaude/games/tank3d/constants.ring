@@ -41,12 +41,15 @@ DIR_RIGHT       = 3
 // Game States
 // =============================================================
 
-ST_TITLE        = 0
 ST_PLAYING      = 1
 ST_PAUSED       = 2
 ST_GAMEOVER     = 3
 ST_LEVELUP      = 4
 ST_WON          = 5
+ST_MENU         = 6
+
+// Virtual index for the Close button in the level-select menu
+CLOSE_BTN       = 13
 
 // =============================================================
 // Camera Modes

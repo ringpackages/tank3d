@@ -5,11 +5,11 @@ aPackageInfo = [
 	:developer = "",
 	:email = "",
 	:license = "MIT License",
-	:version = "1.0.2",
+	:version = "1.0.3",
 	:ringversion = "1.25",
 	:versions = 	[
 		[
-			:version = "1.0.2",
+			:version = "1.0.3",
 			:branch = "master"
 		]
 	],
@@ -35,6 +35,11 @@ aPackageInfo = [
 		"samples/UsingAI/UsingClaude/games/tank3d/music.ring",
 		"samples/UsingAI/UsingClaude/games/tank3d/powerups.ring",
 		"samples/UsingAI/UsingClaude/games/tank3d/README.md",
+		"samples/UsingAI/UsingClaude/games/tank3d/image/ground.png",
+		"samples/UsingAI/UsingClaude/games/tank3d/image/menuback.png",
+		"samples/UsingAI/UsingClaude/games/tank3d/image/stell.png",
+		"samples/UsingAI/UsingClaude/games/tank3d/image/wall.png",
+		"samples/UsingAI/UsingClaude/games/tank3d/image/water.png",
 		"samples/UsingAI/UsingClaude/games/tank3d/sounds/battle_music.wav",
 		"samples/UsingAI/UsingClaude/games/tank3d/sounds/bomb.wav",
 		"samples/UsingAI/UsingClaude/games/tank3d/sounds/brick_break.wav",

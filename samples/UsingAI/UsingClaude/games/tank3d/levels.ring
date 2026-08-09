@@ -32,8 +32,8 @@ func tank_loadLevel lvl
         next
     next
 
-    // Player start position (just above base)
-    px = 9.0
+    // Player start position (just above base, centered horizontally on the level)
+    px = 13.5
     py = 23.0
 
     // Base (bottom center) - 2x2

@@ -57,15 +57,77 @@ monIdx = GetCurrentMonitor()
 monW = GetMonitorWidth(monIdx)
 monH = GetMonitorHeight(monIdx)
 
-InitWindow(monW, monH, "Tank3D")
+InitWindow(monW, monH, "Prince of Vibe Code (Tank3D)")
 SetTargetFPS(60)
-ToggleFullscreen()
+SetExitKey(0)   // disable ESC as a quit key; handled manually
+togglefullscreen()
 BeginDrawing()
 ClearBackground(RAYLIBColor(0, 0, 0, 255))
 EndDrawing()
  
 SCREEN_W = GetScreenWidth()
 SCREEN_H = GetScreenHeight()
+
+// Menu background (must load after window init - OpenGL context required)
+tank_menuBackTex = LoadTexture("image/menuback.png")
+
+// Ground/wall tiles are viewed at a steep, ever-changing angle (see
+// camera.ring), which aliases badly under plain nearest-neighbor sampling -
+// worst when moving toward/away from something (depth-direction minification)
+// rather than side to side, since that's when the texel-to-pixel ratio swings
+// most. Real mipmaps + trilinear (mode 2; not exposed as a named constant in
+// this raylib binding) fixes that. Anisotropic (mode 4) was tried for the
+// remaining grazing-angle flicker on wall side faces under the near-top-down
+// camera, but made flickering worse everywhere on this GPU/driver - reverted.
+// Note: this binding caches texture fields on the Ring side, so
+// GenTextureMipmaps alone doesn't stick - .refresh() is required afterward or
+// SetTextureFilter silently falls back to bilinear (confirmed by testing).
+
+// Destructible-wall texture: one reusable textured cube model, drawn at
+// each brick tile's position (learned from linedrawing3d's cubicmap model:
+// GenMesh + LoadModelFromMesh + SetModelMaterialTexture, since DrawCubeTexture
+// isn't available in this raylib binding).
+tank_wallTex   = LoadTexture("image/wall.png")
+GenTextureMipmaps(tank_wallTex)
+tank_wallTex.refresh()
+SetTextureFilter(tank_wallTex, 2)
+// Slightly wider than CELL_SZ so adjacent wall tiles overlap by a hair
+// instead of touching exactly, which removes the ambiguous zero-width
+// boundary that flickers (a rasterization seam, not a texture issue) -
+// invisible since the wall is opaque and the overlap is tiny.
+tank_wallMesh  = GenMeshCube(CELL_SZ * 1.02, 0.58, CELL_SZ * 1.02)
+tank_wallModel = LoadModelFromMesh(tank_wallMesh)
+SetModelMaterialTexture(tank_wallModel, 0, MAP_DIFFUSE, tank_wallTex)
+
+// Steel (indestructible) wall texture - same reusable-model approach
+tank_steelTex   = LoadTexture("image/stell.png")
+GenTextureMipmaps(tank_steelTex)
+tank_steelTex.refresh()
+SetTextureFilter(tank_steelTex, 2)
+tank_steelMesh  = GenMeshCube(CELL_SZ * 1.02, 0.68, CELL_SZ * 1.02)
+tank_steelModel = LoadModelFromMesh(tank_steelMesh)
+SetModelMaterialTexture(tank_steelModel, 0, MAP_DIFFUSE, tank_steelTex)
+
+// Ground floor texture - reusable per-cell model, drawn once per grid cell
+// so the texture repeats across the floor instead of being stretched over it.
+// It's tiled across all 676 cells and seen at a shallow angle most of the
+// game, so this is likely the biggest contributor to the reported flicker.
+tank_groundTex   = LoadTexture("image/ground.png")
+GenTextureMipmaps(tank_groundTex)
+tank_groundTex.refresh()
+SetTextureFilter(tank_groundTex, 2)
+tank_groundMesh  = GenMeshCube(CELL_SZ, 0.15, CELL_SZ)
+tank_groundModel = LoadModelFromMesh(tank_groundMesh)
+SetModelMaterialTexture(tank_groundModel, 0, MAP_DIFFUSE, tank_groundTex)
+
+// Water tile texture - reusable per-cell model
+tank_waterTex   = LoadTexture("image/water.png")
+GenTextureMipmaps(tank_waterTex)
+tank_waterTex.refresh()
+SetTextureFilter(tank_waterTex, 2)
+tank_waterMesh  = GenMeshCube(CELL_SZ, 0.10, CELL_SZ)
+tank_waterModel = LoadModelFromMesh(tank_waterMesh)
+SetModelMaterialTexture(tank_waterModel, 0, MAP_DIFFUSE, tank_waterTex)
 
 // Initialize audio
 tank_initAudio()
@@ -80,7 +142,7 @@ cam = Camera3D(
 
 tank_loadLevel(level)
 
-while !WindowShouldClose()
+while !WindowShouldClose() and !quitGame
     dt = GetFrameTime()
     if dt > 0.05 dt = 0.05 ok
 
@@ -99,27 +161,51 @@ while !WindowShouldClose()
     ok
 
     BeginDrawing()
+        // ClearBackground also resets the depth buffer each frame (required
+        // for correct 3D occlusion) - the color it clears to doesn't matter
+        // for gameplay since the gradient below repaints every pixel anyway.
         ClearBackground(RAYLIBColor(10, 10, 10, 255))
-        tank_updateCamera()
-        BeginMode3D(cam)
-            tank_drawFloor()
-            tank_drawWalls3D()
-            tank_drawBase3D()
-            tank_drawTrees3D()
-            tank_drawLava3D()
-            tank_drawPlayer3D()
-            tank_drawEnemies3D()
-            tank_drawBullets3D()
-            tank_drawExplosions3D()
-            tank_drawPowerups3D()
-            tank_drawParticles3D()
-        EndMode3D()
+        if gameState != ST_MENU
+            // Sky gradient (same colors as platform2d's parallax background)
+            DrawRectangleGradientV(0, 0, SCREEN_W, SCREEN_H / 2,
+                RAYLIBColor(20, 20, 50, 255), RAYLIBColor(40, 35, 70, 255))
+            DrawRectangleGradientV(0, SCREEN_H / 2, SCREEN_W, SCREEN_H / 2,
+                RAYLIBColor(40, 35, 70, 255), RAYLIBColor(16, 16, 32, 255))
+        ok
+        if gameState != ST_MENU
+            tank_updateCamera()
+            BeginMode3D(cam)
+                tank_drawFloor()
+                tank_drawWalls3D()
+                tank_drawBase3D()
+                tank_drawTrees3D()
+                tank_drawLava3D()
+                tank_drawPlayer3D()
+                tank_drawEnemies3D()
+                tank_drawBullets3D()
+                tank_drawExplosions3D()
+                tank_drawPowerups3D()
+                tank_drawParticles3D()
+            EndMode3D()
+        ok
         tank_drawHUD()
-        tank_drawMinimap()
+        if gameState != ST_MENU
+            tank_drawMinimap()
+        ok
     EndDrawing()
 end
 
 // Cleanup audio
 tank_cleanupAudio()
+
+UnloadTexture(tank_menuBackTex)
+UnloadModel(tank_wallModel)
+UnloadTexture(tank_wallTex)
+UnloadModel(tank_steelModel)
+UnloadTexture(tank_steelTex)
+UnloadModel(tank_groundModel)
+UnloadTexture(tank_groundTex)
+UnloadModel(tank_waterModel)
+UnloadTexture(tank_waterTex)
 
 CloseWindow()

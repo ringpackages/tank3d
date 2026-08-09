@@ -66,7 +66,7 @@ func tank_update dt
                         if score > highScore highScore = score ok
                         PlaySound(sndGameOver)
                     else
-                        px = 9.0 py = 23.0 pdir = DIR_UP
+                        px = 13.5 py = 23.0 pdir = DIR_UP
                         palive = true pshield = 2.0
                     ok
                 ok
@@ -459,7 +459,7 @@ func tank_updateEnemies dt
         pshield += dt  // pshield is negative timer during respawn
         if pshield >= 0
             palive = true
-            px = 9.0
+            px = 13.5
             py = 23.0
             pdir = DIR_UP
             pshield = 3.0   // Spawn protection
@@ -486,9 +486,21 @@ func tank_spawnEnemies dt
     if enemySpawnTimer > 0 return ok
     enemySpawnTimer = RESPAWN_DELAY
 
-    // Spawn at next spawn point
-    sx = espawnX[espawnIdx]
+    // Spawn at next spawn point, skipping any that are too close to the player
+    sx = 0
     sy = 1.5
+    nSpawns = len(espawnX)
+    for attempt = 1 to nSpawns
+        candidateX = espawnX[espawnIdx]
+        sdx = candidateX - px
+        sdy = sy - py
+        if sdx*sdx + sdy*sdy >= 9.0   // 3-unit minimum distance
+            sx = candidateX
+            exit
+        ok
+        espawnIdx = (espawnIdx % nSpawns) + 1
+    next
+    if sx = 0 return ok   // all spawn points blocked — skip this tick
 
     // Boss level: spawn boss as last enemy
     isBossLevel = (level = 4 or level = 8 or level = 12)

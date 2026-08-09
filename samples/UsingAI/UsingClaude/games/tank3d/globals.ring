@@ -28,9 +28,30 @@ musicPlaying    = 0     // 0=none, 1=menu, 2=battle
 // Global Variables
 // =============================================================
 
-gameState       = ST_TITLE
+gameState       = ST_MENU
 level           = 1
 maxLevel        = 12
+menuSelectedLevel = 1
+menuLastHover     = -1   // tracks last hovered menu item; -1 = none
+menuLastMouseX    = -1   // tracks last mouse X to detect movement
+menuLastMouseY    = -1   // tracks last mouse Y to detect movement
+menuPressX        = -1   // mouse X when left button was first pressed
+menuPressY        = -1   // mouse Y when left button was first pressed
+menuPressHover    = -1   // hovered item index at press time
+quitGame        = false
+
+// Combined welcome + stage-select screen layout (computed by
+// tank_computeMenuLayout; shared between tank_drawMenu and
+// tank_handleMenuInput so the drawn geometry and the hit-testing
+// geometry can never drift apart).
+tank_titleSz=0 tank_titleY=0
+tank_ctrlSz=0  tank_ctrlY1=0  tank_ctrlY2=0
+tank_hsSz=0    tank_hsY=0
+tank_selLblSz=0 tank_selLblY=0
+tank_cardW=0 tank_cardH=0 tank_gapX=0 tank_gapY=0
+tank_stgSz=0
+tank_startX=0 tank_startY=0 tank_gridH=0
+tank_btnLblSz=0 tank_btnW=0 tank_btnH=0 tank_btnX=0 tank_btnY=0
 score           = 0
 lives           = 3
 highScore       = 0
@@ -39,7 +60,7 @@ highScore       = 0
 tiles           = []
 
 // Player tank
-px = 9.0
+px = 13.5
 py = 1.0
 pdir = DIR_UP
 palive = true
